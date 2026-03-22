@@ -1,0 +1,115 @@
+version: '3.9'
+
+networks:
+  ecommerce-network:
+    driver: bridge
+
+volumes:
+  mongo-auth-data:
+  mongo-product-data:
+  mongo-order-data:
+
+services:
+
+  # ── FRONTEND ──────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "8080:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    networks:
+      - ecommerce-network
+    depends_on:
+      - auth-service
+      - product-service
+      - order-service
+
+  # ── AUTH SERVICE ──────────────────────────────────────────
+  auth-service:
+    build:
+      context: ./services/auth-service
+      target: development
+    volumes:
+      - ./services/auth-service:/app
+      - /app/node_modules
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - MONGO_URI=mongodb://mongo-auth:27017/auth_db
+      - JWT_SECRET=dev_secret_change_in_production
+      - JWT_EXPIRES_IN=7d
+    networks:
+      - ecommerce-network
+    depends_on:
+      - mongo-auth
+
+  mongo-auth:
+    image: mongo:7-jammy
+    volumes:
+      - mongo-auth-data:/data/db
+    networks:
+      - ecommerce-network
+
+  # ── PRODUCT SERVICE ───────────────────────────────────────
+  product-service:
+    build:
+      context: ./services/product-service
+      target: development
+    volumes:
+      - ./services/product-service:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGO_URI=mongodb://mongo-product:27017/product_db
+    networks:
+      - ecommerce-network
+    depends_on:
+      - mongo-product
+
+  mongo-product:
+    image: mongo:7-jammy
+    volumes:
+      - mongo-product-data:/data/db
+    networks:
+      - ecommerce-network
+
+  # ── ORDER SERVICE ─────────────────────────────────────────
+  order-service:
+    build:
+      context: ./services/order-service
+      target: development
+    volumes:
+      - ./services/order-service:/app
+      - /app/node_modules
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - MONGO_URI=mongodb://mongo-order:27017/order_db
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - PRODUCT_SERVICE_URL=http://product-service:3000
+    networks:
+      - ecommerce-network
+    depends_on:
+      - mongo-order
+      - auth-service
+      - product-service
+
+  mongo-order:
+    image: mongo:7-jammy
+    volumes:
+      - mongo-order-data:/data/db
+    networks:
+      - ecommerce-network
