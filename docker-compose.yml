@@ -43,7 +43,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3001
-      - MONGO_URI=mongodb://mongo-auth:27017/auth_db
+      - MONGODB_URI=mongodb://mongo-auth:27017/auth_db
       - JWT_SECRET=dev_secret_change_in_production
       - JWT_EXPIRES_IN=7d
     networks:
@@ -71,7 +71,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - MONGO_URI=mongodb://mongo-product:27017/product_db
+      - MONGODB_URI=mongodb://mongo-product:27017/product_db
     networks:
       - ecommerce-network
     depends_on:
@@ -97,7 +97,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3002
-      - MONGO_URI=mongodb://mongo-order:27017/order_db
+      - MONGODB_URI=mongodb://mongo-order:27017/order_db
       - AUTH_SERVICE_URL=http://auth-service:3001
       - PRODUCT_SERVICE_URL=http://product-service:3000
     networks:
