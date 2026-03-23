@@ -1,0 +1,162 @@
+version: '3.9'
+
+networks:
+  ecommerce-network:
+    driver: overlay
+
+volumes:
+  mongo-auth-data:
+  mongo-product-data:
+  mongo-order-data:
+
+secrets:
+  jwt_secret:
+    external: true
+
+services:
+
+  # ── FRONTEND ──────────────────────────────────────────────
+  frontend:
+    image: e-commerce_frontend:latest 
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "8080:80"
+    networks:
+      - ecommerce-network
+    depends_on:
+      - auth-service
+      - product-service
+      - order-service
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+  # ── AUTH SERVICE ──────────────────────────────────────────
+  auth-service:
+    image: e-commerce_auth-service:latest
+    build:
+      context: ./services/auth-service
+      target: production
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGO_URI=mongodb://mongo-auth:27017/auth_db
+      - JWT_EXPIRES_IN=7d
+    secrets:
+      - jwt_secret
+    networks:
+      - ecommerce-network
+    depends_on:
+      - mongo-auth
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+  mongo-auth:
+    image: mongo:7-jammy
+    volumes:
+      - mongo-auth-data:/data/db
+    networks:
+      - ecommerce-network
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+  # ── PRODUCT SERVICE ───────────────────────────────────────
+  product-service:
+    image: e-commerce_product-service:latest
+    build:
+      context: ./services/product-service
+      target: production
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGO_URI=mongodb://mongo-product:27017/product_db
+    networks:
+      - ecommerce-network
+    depends_on:
+      - mongo-product
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+  mongo-product:
+    image: mongo:7-jammy
+    volumes:
+      - mongo-product-data:/data/db
+    networks:
+      - ecommerce-network
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+  # ── ORDER SERVICE ─────────────────────────────────────────
+  order-service:
+    image: e-commerce_order-service:latest
+    build:
+      context: ./services/order-service
+      target: production
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - MONGO_URI=mongodb://mongo-order:27017/order_db
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - PRODUCT_SERVICE_URL=http://product-service:3000
+    networks:
+      - ecommerce-network
+    depends_on:
+      - mongo-order
+      - auth-service
+      - product-service
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+  mongo-order:
+    image: mongo:7-jammy
+    volumes:
+      - mongo-order-data:/data/db
+    networks:
+      - ecommerce-network
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
