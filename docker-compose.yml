@@ -15,12 +15,13 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
+      target: development
     volumes:
       - ./frontend:/app
       - /app/node_modules
     ports:
-      - "8080:5173"
+      - "8080:8080"
     environment:
       - VITE_API_URL=http://localhost:8080
     networks:
