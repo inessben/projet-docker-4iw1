@@ -1,5 +1,5 @@
 # ── STAGE 1 : development ──────────────────────────────────
-FROM node:20-alpine AS development
+FROM node:22-alpine AS development
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ EXPOSE 8080
 CMD ["npm", "run", "dev"]
 
 # ── STAGE 2 : builder  ──────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
